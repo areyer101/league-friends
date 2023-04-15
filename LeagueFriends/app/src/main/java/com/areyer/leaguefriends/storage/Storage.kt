@@ -3,6 +3,7 @@ package com.areyer.leaguefriends.storage
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
+import android.util.Log
 import com.areyer.leaguefriends.extensions.fromJson
 import com.areyer.leaguefriends.extensions.fromJsonList
 import com.areyer.leaguefriends.extensions.toJson
@@ -20,6 +21,7 @@ class Storage(context: Context) {
     }
 
     fun store(key: String, value: List<Any>) {
+        Log.d(TAG, "store string: $key, value: ${value.toJsonList()}")
         sharedPreferences.edit().putString(key, value.toJsonList()).apply()
     }
 
@@ -31,5 +33,9 @@ class Storage(context: Context) {
 
     inline fun <reified T> getList(key: String): List<T> {
         return sharedPreferences.getString(key, null)?.fromJsonList() ?: listOf()
+    }
+
+    companion object {
+        private val TAG = Storage::class.java.canonicalName
     }
 }

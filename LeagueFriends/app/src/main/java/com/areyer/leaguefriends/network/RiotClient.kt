@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.areyer.leaguefriends.BuildConfig.RIOT_API_KEY
 import com.areyer.leaguefriends.Constants.DBKEY_SUMMONERS
+import com.areyer.leaguefriends.network.repositories.SummonerRepo
 import com.areyer.leaguefriends.storage.Storage
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -25,31 +26,25 @@ object RiotClient {
         .add(KotlinJsonAdapterFactory())
         .build()
 
-    suspend fun getSummoner(context: Context, summonerName: String): Summoner? {
+    suspend fun querySummoner(context: Context, summonerName: String): Summoner? {
         // Read summoner info from storage
         val storage = Storage(context)
         val storedSummoners = storage.getList<Summoner>(DBKEY_SUMMONERS).toMutableList()
-        var summoner: Summoner? = storedSummoners.firstOrNull { it.name == summonerName }
-
-        // If no stored summoner, query from server
-        if (summoner == null) {
-            summoner = try {
-                summoner = RiotCommandFactory().createCommand().getSummoner(summonerName)
-                storedSummoners.add(summoner)
-                storage.store(DBKEY_SUMMONERS, storedSummoners)
-                summoner
-            } catch (e: Exception) {
-                Log.d(TAG, "getSummoner error finding summoner with provided name")
-                null
-            }
+        return try {
+            val summoner = RiotCommandFactory().createCommand().getSummoner(summonerName)
+            storedSummoners.add(summoner)
+            storage.store(DBKEY_SUMMONERS, storedSummoners)
+            summoner
+        } catch (e: Exception) {
+            Log.d(TAG, "getSummoner error finding summoner with provided name")
+            null
         }
-
-        return summoner
     }
 
     suspend fun isSummonerActive(context: Context, summonerName: String): Boolean {
         return try {
-            val summonerId = getSummoner(context, summonerName)?.id ?: return false
+            val summonerRepo = SummonerRepo(context)
+            val summonerId = summonerRepo.readSummoner(context, summonerName)?.id ?: return false
             RiotCommandFactory().createCommand().getActiveMatch(summonerId)
         } catch (e: Exception) {
             Log.d(TAG, "getActivateMatch no matches found")
